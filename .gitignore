@@ -25,6 +25,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+include/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -127,6 +128,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+share/
+scripts/
 
 # Spyder project settings
 .spyderproject
@@ -158,3 +161,7 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+
+# Generated files from RL algorithm
+checkpoints/
+tmp/

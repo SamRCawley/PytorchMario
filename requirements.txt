@@ -1,0 +1,8 @@
+--extra-index-url https://download.pytorch.org/whl/cu118
+gym-super-mario-bros
+matplotlib
+torchrl
+tensordict
+torchvision
+scikit-image
+openCV-python
