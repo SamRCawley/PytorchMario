@@ -130,6 +130,7 @@ env.bak/
 venv.bak/
 share/
 scripts/
+pyvenv.cfg
 
 # Spyder project settings
 .spyderproject

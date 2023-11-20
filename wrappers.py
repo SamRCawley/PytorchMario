@@ -1,10 +1,4 @@
-from typing import Any, SupportsFloat
 import gym
-import torch
-import random, datetime, numpy as np
-from skimage import transform
-from torchvision import transforms as T
-from gym.spaces import Box
 
 class SkipFrame(gym.Wrapper):
     def __init__(self, env, skip):
