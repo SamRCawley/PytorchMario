@@ -10,16 +10,17 @@ from nes_py.wrappers import JoypadSpace
 import cv2
 import gym_super_mario_bros
 from agent import Mario
+from config import environment as config
+
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 torch.backends.cudnn.benchmark = True
 
-
 parser = argparse.ArgumentParser()
-parser.add_argument('--play', '-p', action="store_true", help='Runs model from checkpoint with no learning')
+parser.add_argument('--play', '-p', action="store_true", help='Runs model from checkpoint with visualization but no learning')
 parser.add_argument('--visualize', '-v', action="store_true", help='Enables visualization of the game')
 parser.add_argument('--no_log', '-nl', action="store_false", help='Disables automatic logging')
-parser.add_argument('--num_episodes', '-n', default=500, type=int, help='Sets number of episodes (default=500)')
+parser.add_argument('--num_episodes', '-n', default=config.num_episodes, type=int, help='Sets number of episodes (default=500)')
 args = parser.parse_args()
 LOGGING = args.no_log
 VISUALIZE = args.visualize
@@ -41,26 +42,26 @@ def cannyfilter (x):
     cv2.waitKey(0)
     return edges"""
 
-env = JoypadSpace(env, [["right"], ["right", "A"], ["A"], ["left"], ["left", "A"], ["B", "right"], ["B", "right", "A"]])
-env = SkipFrame(env, skip=4)
+env = JoypadSpace(env, config.actions)
+env = SkipFrame(env, skip=config.skip_frame_num)
 
 # Apply Wrappers to environment
 env = GrayScaleObservation(env, keep_dim=False)
-env = TransformObservation(env, f=lambda x: cv2.Canny(x, 30, 180))
+env = TransformObservation(env, f=lambda x: cv2.Canny(x, config.canny_low, config.canny_high))
 #env = TransformObservation(env, f=lambda x: cannyfilter(x))
 env = TransformObservation(env, f=lambda x: (x / 255.))
 env = TransformObservation(env, f=lambda x: np.squeeze(x))
 env = FlattenObservation(env)
 env = TransformObservation(env, f= lambda x: x.astype(np.float32))
-env = FrameStack(env, num_stack=4)
+env = FrameStack(env, num_stack=config.stack_frame_num)
 env.reset()
 
 if LOGGING:
-    logger_save_dir = Path('checkpoints') / datetime.datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
+    logger_save_dir = Path(config.save_dir) / datetime.datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
     logger_save_dir.mkdir(parents=True)
     logger = MetricLogger(logger_save_dir)
-save_dir = Path('checkpoints')
-load_path = save_dir / 'mario_net.chkpt'
+save_dir = Path(config.save_dir)
+load_path = save_dir / config.save_file
 checkpoint = None
 if load_path.exists():
     checkpoint = load_path
@@ -68,7 +69,7 @@ if args.play and not load_path.exists():
     raise Exception("Cannot run replay:  No checkpoint exists.")
 mario = Mario(state_dim=(4, 240, 256), action_dim=env.action_space.n, save_dir=save_dir, checkpoint=checkpoint)
 if args.play:
-    mario.exploration_rate = 0
+    mario.exploration_rate = mario.exploration_rate_min
 
 ### for Loop that train the model num_episodes times by playing the game
 for e in range(NUM_EPISODES):
@@ -100,14 +101,14 @@ for e in range(NUM_EPISODES):
         if done or info['flag_get']:
             break
     if e % 10 == 0:
-        print(f'Episode {e}: Current exploration rate {mario.exploration_rate}')
+        print(f'Episode {mario.episode_num}: Current exploration rate {mario.exploration_rate}')
 
     if LOGGING:
         logger.log_episode()
 
         if e % 20 == 0 and e > 0:
             logger.record(
-                episode=e,
+                episode=mario.episode_num,
                 epsilon=mario.exploration_rate,
                 step=mario.curr_step
             )

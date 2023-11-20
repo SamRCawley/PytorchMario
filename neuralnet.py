@@ -1,5 +1,6 @@
 from torch import nn
 import copy
+from config import network as config
 
 class MarioNet(nn.Module):
     '''mini cnn structure
@@ -26,11 +27,11 @@ class MarioNet(nn.Module):
             nn.Linear(512, output_dim)
         )"""
         #LSTM with 256x240 (flattened) input layer
-        self.online = nn.LSTM(61440, 50, 4)
+        self.online = nn.LSTM(61440, config.layer_size, config.n_layers)
         self.target = copy.deepcopy(self.online)
         #Linear layer mapping LSTM output to action space
-        self.online_to_action = nn.Linear(50, output_dim)
-        self.target_to_action = nn.Linear(50, output_dim)
+        self.online_to_action = nn.Linear(config.layer_size, output_dim)
+        self.target_to_action = nn.Linear(config.layer_size, output_dim)
 
         # Q_target parameters are frozen.
         for p in self.target.parameters():
