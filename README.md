@@ -14,7 +14,7 @@ This is an update of the pytorch tutorial to create a RL model for Super Mario B
 
 ## Installation:
 > [!IMPORTANT]
-> Note: nes-py requires visual C++ build tools
+> nes-py requires visual C++ build tools
 
 ` python -m venv .`
 ` ./Scripts/Activate `
