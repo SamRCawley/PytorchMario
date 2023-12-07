@@ -21,7 +21,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--play', '-p', action="store_true", help='Runs model from checkpoint with visualization but no learning')
 parser.add_argument('--visualize', '-v', action="store_true", help='Enables visualization of the game')
 parser.add_argument('--no_log', '-nl', action="store_false", help='Disables automatic logging')
-parser.add_argument('--num_episodes', '-n', default=config.num_episodes, type=int, help='Sets number of episodes (default=500)')
+parser.add_argument('--num_episodes', '-n', default=config.num_episodes, type=int, help=f'Sets number of episodes (default={config.num_episodes})')
 args = parser.parse_args()
 LOGGING = args.no_log
 VISUALIZE = args.visualize
@@ -33,7 +33,7 @@ if args.play:
 
 render_mode = 'human' if VISUALIZE else None
 
-env = gym_super_mario_bros.make("SuperMarioBros-v0", render_mode=render_mode, apply_api_compatibility=True)
+env = gym_super_mario_bros.make(config.mario_version, render_mode=render_mode, apply_api_compatibility=True)
 
 
 """#Debug for edge detection filter

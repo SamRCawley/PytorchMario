@@ -24,7 +24,7 @@ class Mario:
         #self.memory = TensorDictReplayBuffer(storage=LazyTensorStorage(3000, device=self.storage_device))
         self.episode_num = 0
         self.exploration_rate = config.exploration_rate
-        self.exploration_rate_decay = config.exploration_rate_decay
+        self.exploration_rate_decay_episodes = config.exploration_rate_decay_episodes
         self.exploration_rate_min = config.exploration_rate_min
         self.gamma = config.gamma
         self.curr_step = 0
@@ -76,8 +76,7 @@ class Mario:
             action_idx = torch.argmax(action_values)
             action_idx = action_idx.to('cpu', non_blocking=True).item()
         # decrease exploration_rate
-        self.exploration_rate *= self.exploration_rate_decay
-        self.exploration_rate = max(self.exploration_rate_min, self.exploration_rate)
+        self.exploration_rate = config.exploration_rate - min(self.episode_num / self.exploration_rate_decay_episodes, 1.0) * (config.exploration_rate - self.exploration_rate_min)
         # increment step
         self.curr_step += 1
         return action_idx
