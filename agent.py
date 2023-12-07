@@ -5,6 +5,8 @@ from neuralnet import MarioNet
 from tensordict import TensorDict
 from pathlib import Path
 from config import Agent as config
+from config import network as net_config
+from config import environment as env_config
 #torch.autograd.set_detect_anomaly(True)
 
 class Mario:
@@ -17,11 +19,10 @@ class Mario:
         self.action_dim = action_dim
         self.batch_size = config.batch_size
         self.memory = TensorDictReplayBuffer(storage=LazyMemmapStorage(20000, scratch_dir=Path(config.temp_dir), device=self.storage_device), pin_memory=True, batch_size=self.batch_size, prefetch=100)
+        self.episode_states, self.episode_next_states, self.episode_actions, self.episode_rewards, self.episode_done = [], [], [], [], []
         #Memory settings need to be configured based on the host machine
         #self.memory = TensorDictReplayBuffer(storage=LazyTensorStorage(3000, device=self.storage_device))
         self.episode_num = 0
-        self.net_tuple = None
-        self.prev_net_tuple = None
         self.exploration_rate = config.exploration_rate
         self.exploration_rate_decay = config.exploration_rate_decay
         self.exploration_rate_min = config.exploration_rate_min
@@ -41,8 +42,13 @@ class Mario:
         self.loss_fn = torch.nn.SmoothL1Loss()
 
     def reset(self):
-        self.net_tuple = None
-        self.prev_net_tuple = None
+        if self.episode_states:
+            #Adjust rewards in last few actions before failure to compensate for unwinnable situations (e.g. falling into pits)
+            self.episode_rewards = np.array(self.episode_rewards)
+            self.episode_rewards[-5:-1] -= 15
+            episode = TensorDict({"state": self.episode_states, "next_state": self.episode_next_states, "action": self.episode_actions, "reward": self.episode_rewards, "done": self.episode_done}, batch_size=len(self.episode_states), device=self.storage_device)
+            self.memory.extend(episode)
+            self.episode_states, self.episode_next_states, self.episode_actions, self.episode_rewards, self.episode_done = [], [], [], [], []
         self.episode_num += 1
 
     def act(self, state):
@@ -64,11 +70,11 @@ class Mario:
             action_idx = np.random.choice(np.arange(self.action_dim), p=config.action_probability)
         # EXPLOIT
         else:
-            state = torch.tensor(state, device=self.device)
-            state = state.unsqueeze(1)
-            self.prev_net_tuple = self.net_tuple
-            action_values, self.net_tuple = self.net(state, self.net_tuple, model='online')
-            action_idx = torch.argmax(action_values).item()
+            state = torch.as_tensor(state, device=self.device)
+            state = state.unsqueeze(0)
+            action_values = self.net(state, model='online')
+            action_idx = torch.argmax(action_values)
+            action_idx = action_idx.to('cpu', non_blocking=True).item()
         # decrease exploration_rate
         self.exploration_rate *= self.exploration_rate_decay
         self.exploration_rate = max(self.exploration_rate_min, self.exploration_rate)
@@ -101,31 +107,33 @@ class Mario:
         action = torch.tensor([action], device=self.storage_device)
         reward = torch.tensor([reward], device=self.storage_device)
         done = torch.tensor([done], device=self.storage_device)
-        #Add state and h_t, c_t tuple to memory for learning
-        if self.prev_net_tuple is not None and self.net_tuple is not None:
-            self.memory.add(TensorDict({"state": state, "h_n": self.prev_net_tuple[0].squeeze().detach().to(self.storage_device),  "c_n": self.prev_net_tuple[1].squeeze().detach().to(self.storage_device), "next_state": next_state, "next_h_n": self.net_tuple[0].squeeze().detach().to(self.storage_device), "next_c_n": self.net_tuple[1].squeeze().detach().to(self.storage_device), "action": action, "reward": reward, "done": done}, batch_size=[], device=self.storage_device))
-
+        #self.temp.add(TensorDict({"state": state, "next_state": next_state, "action": action, "reward": reward, "done": done}, batch_size=[], device=self.storage_device))
+        self.episode_states.append(state)
+        self.episode_next_states.append(next_state)
+        self.episode_actions.append(action)
+        self.episode_rewards.append(reward)
+        self.episode_done.append(done)
 
     def recall(self):
         """
         Retrieve a batch of experiences from memory
         """
-        batch = self.memory.sample().to(self.device)
-        state, h_n, c_n, next_state, next_h_n, next_c_n, action, reward, done = (batch.get(key) for key in ("state", "h_n", "c_n", "next_state", "next_h_n", "next_c_n", "action", "reward", "done"))
-        return state.transpose(0,1).contiguous(), (h_n.transpose(0,1).contiguous(), c_n.transpose(0,1).contiguous()), next_state.transpose(0,1).contiguous(), (next_h_n.transpose(0,1).contiguous(), next_c_n.transpose(0,1).contiguous()), action.squeeze(), reward.squeeze(), done.squeeze()
+        batch = self.memory.sample().to(self.device, non_blocking=True)
+        state, next_state, action, reward, done = (batch.get(key) for key in ("state", "next_state", "action", "reward", "done"))
+        return state, next_state , action.squeeze(), reward.squeeze(), done.squeeze()
 
 
-    def td_estimate(self, state, action, hidden):
-        net_result, online_tuple = self.net(state, hidden, model='online')
+    def td_estimate(self, state, action):
+        net_result = self.net(state, model='online')
         current_Q = net_result[np.arange(0, self.batch_size), action] # Q_online(s,a)
         return current_Q
 
 
     @torch.no_grad()
-    def td_target(self, reward, next_state, done, hidden, next_hidden):
-        next_state_Q, online_tuple = self.net(next_state, next_hidden, model='online')
+    def td_target(self, reward, next_state, done):
+        next_state_Q = self.net(next_state, model='online')
         best_action = torch.argmax(next_state_Q, axis=1)
-        next_Q, target_tuple = self.net(next_state, next_hidden, model='target')
+        next_Q = self.net(next_state, model='target')
         next_Q = next_Q[np.arange(0, self.batch_size), best_action]
         return (reward + (1 - done.float()) * self.gamma * next_Q).float()
 
@@ -156,13 +164,13 @@ class Mario:
             return None, None
 
         # Sample from memory
-        state, hidden, next_state, next_hidden, action, reward, done = self.recall()
+        state, next_state, action, reward, done = self.recall()
 
         # Get TD Estimate
-        td_est = self.td_estimate(state, action, hidden)
+        td_est = self.td_estimate(state, action)
 
         # Get TD Target
-        td_tgt = self.td_target(reward, next_state, done, hidden, next_hidden)
+        td_tgt = self.td_target(reward, next_state, done)
 
         # Backpropagate loss through Q_online
         loss = self.update_Q_online(td_est, td_tgt)

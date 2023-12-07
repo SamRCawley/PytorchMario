@@ -1,56 +1,35 @@
 from torch import nn
 import copy
-from config import network as config
 
 class MarioNet(nn.Module):
-    '''mini cnn structure
-    input -> (conv2d + relu) x 3 -> flatten -> (dense + relu) x 2 -> output
-    '''
+
     def __init__(self, input_dim, output_dim):
         super().__init__()
-        c, h, w = input_dim
-        #initial kernel size is 16 / 4 which is the resized dimension of a sprite
-        """self.online = nn.Sequential(
-            nn.Conv2d(in_channels=c, out_channels=4, kernel_size=1),
+        #Convolution network for normalized RGB image.
+        self.online = nn.Sequential(
+            nn.Conv3d(in_channels=input_dim[0], out_channels=6, kernel_size=1),
             nn.ReLU(),
-            nn.Conv2d(in_channels=4, out_channels=4, kernel_size=1),
+            nn.Conv3d(in_channels=6, out_channels=12, kernel_size=1),
             nn.ReLU(),
-            nn.Conv2d(in_channels=4, out_channels=4, kernel_size=1),
+            nn.Conv3d(in_channels=12, out_channels=6, kernel_size=1),
             nn.ReLU(),
-            nn.Conv2d(in_channels=4, out_channels=4, kernel_size=1),
-            nn.ReLU(),
-            nn.Conv2d(in_channels=4, out_channels=4, kernel_size=1),
+            nn.Conv3d(in_channels=6, out_channels=3, kernel_size=1),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(245760, 512),
+            nn.Linear(368640, 512),
             nn.ReLU(),
             nn.Linear(512, output_dim)
-        )"""
-        #LSTM with 256x240 (flattened) input layer
-        self.online = nn.LSTM(61440, config.layer_size, config.n_layers)
+        )
         self.target = copy.deepcopy(self.online)
-        #Linear layer mapping LSTM output to action space
-        self.online_to_action = nn.Linear(config.layer_size, output_dim)
-        self.target_to_action = nn.Linear(config.layer_size, output_dim)
 
         # Q_target parameters are frozen.
         for p in self.target.parameters():
             p.requires_grad = False
-        for p in self.target_to_action.parameters():
-            p.requires_grad = False
 
-    def forward(self, input, net_tuple, model):
-        output, hidden = None, None
+    def forward(self, input, model):
+        output = None
         if model == 'online':
-            if net_tuple is not None:
-                output, hidden =  self.online(input, net_tuple)
-            else:
-                output, hidden = self.online(input)
-            output = self.online_to_action(output[-1])
+            output =  self.online(input)
         elif model == 'target':
-            if net_tuple is not None:
-                output, hidden = self.target(input, net_tuple)
-            else:
-                output, hidden = self.target(input)
-            output = self.target_to_action(output[-1])
-        return output, hidden
+            output = self.target(input)
+        return output
