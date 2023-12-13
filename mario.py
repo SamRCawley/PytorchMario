@@ -79,12 +79,16 @@ for e in range(NUM_EPISODES):
     state = env.reset()
     mario.reset()
     # Play the game!
+    prev_lives = 3
+    lives = 3
     while True:
 
         # 4. Run agent on the state
         action = mario.act(state)
         # 5. Agent performs action
         next_state, reward, done, truncated, info = env.step(action)
+        prev_lives = lives
+        lives = info['life']
         if not args.play:
             # 6. Remember
             mario.cache(state, next_state, action, reward, done)
@@ -99,9 +103,15 @@ for e in range(NUM_EPISODES):
         # 9. Update state
         state = next_state
 
-        # 10. Check if end of game
-        if done or info['flag_get']:
+        # 10. Check if end of game, level, or life lost
+        if lives < prev_lives:
+            mario.decrease_recent_rewards()
+        if info['flag_get']:
+            mario.increase_level_rewards()
+        if done:
             break
+
+
     if e % 10 == 0:
         print(f'Episode {mario.episode_num}, Step {mario.curr_step}: Current exploration rate {mario.exploration_rate}')
 

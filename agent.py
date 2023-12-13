@@ -19,7 +19,7 @@ class Mario:
         self.action_dim = action_dim
         self.batch_size = config.batch_size
         self.memory = TensorDictReplayBuffer(storage=LazyMemmapStorage(20000, scratch_dir=Path(config.temp_dir), device=self.storage_device), pin_memory=True, batch_size=self.batch_size, prefetch=100)
-        self.episode_states, self.episode_next_states, self.episode_actions, self.episode_rewards, self.episode_done = [], [], [], [], []
+        self.episode_states, self.episode_next_states, self.episode_actions, self.episode_rewards, self.episode_done, self.level_start_index = [], [], [], [], [], 0
         #Memory settings need to be configured based on the host machine
         #self.memory = TensorDictReplayBuffer(storage=LazyTensorStorage(3000, device=self.storage_device))
         self.episode_num = 0
@@ -41,15 +41,27 @@ class Mario:
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=config.learning_rate)
         self.loss_fn = torch.nn.SmoothL1Loss()
 
+    def decrease_recent_rewards(self):
+        self.level_start_index = len(self.episode_rewards) - 1
+        self.episode_rewards = np.array(self.episode_rewards)
+        self.episode_rewards[-5:-1] -= 15
+        self.episode_rewards = self.episode_rewards.tolist()
+
+    def increase_level_rewards(self):
+        current_index = len(self.episode_rewards) - 1
+        self.episode_rewards = np.array(self.episode_rewards)
+        length_of_level = current_index - self.level_start_index + 1
+        self.episode_rewards[self.level_start_index:] += 500 / length_of_level
+        self.level_start_index = current_index
+
     def reset(self):
         if self.episode_states:
             #Adjust rewards in last few actions before failure to compensate for unwinnable situations (e.g. falling into pits)
-            self.episode_rewards = np.array(self.episode_rewards)
-            self.episode_rewards[-5:-1] -= 15.0
             episode = TensorDict({"state": self.episode_states, "next_state": self.episode_next_states, "action": self.episode_actions, "reward": self.episode_rewards, "done": self.episode_done}, batch_size=len(self.episode_states), device=self.storage_device)
             self.memory.extend(episode)
             self.episode_states, self.episode_next_states, self.episode_actions, self.episode_rewards, self.episode_done = [], [], [], [], []
         self.episode_num += 1
+        self.level_start_index = 0
 
     def act(self, state):
         """
