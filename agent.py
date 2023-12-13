@@ -45,7 +45,7 @@ class Mario:
         if self.episode_states:
             #Adjust rewards in last few actions before failure to compensate for unwinnable situations (e.g. falling into pits)
             self.episode_rewards = np.array(self.episode_rewards)
-            self.episode_rewards[-5:-1] -= 15
+            self.episode_rewards[-5:-1] -= 15.0
             episode = TensorDict({"state": self.episode_states, "next_state": self.episode_next_states, "action": self.episode_actions, "reward": self.episode_rewards, "done": self.episode_done}, batch_size=len(self.episode_states), device=self.storage_device)
             self.memory.extend(episode)
             self.episode_states, self.episode_next_states, self.episode_actions, self.episode_rewards, self.episode_done = [], [], [], [], []
@@ -74,7 +74,7 @@ class Mario:
             state = state.unsqueeze(0)
             action_values = self.net(state, model='online')
             action_idx = torch.argmax(action_values)
-            action_idx = action_idx.to('cpu', non_blocking=True).item()
+            action_idx = action_idx.to('cpu').item()
         # decrease exploration_rate
         self.exploration_rate = config.exploration_rate - min(self.episode_num / self.exploration_rate_decay_episodes, 1.0) * (config.exploration_rate - self.exploration_rate_min)
         # increment step
@@ -103,9 +103,9 @@ class Mario:
             next_state = np.array(next_state, dtype=np.float32)
         state = torch.as_tensor(state, device=self.storage_device)
         next_state = torch.as_tensor(next_state, device=self.storage_device)
-        action = torch.tensor([action], device=self.storage_device)
-        reward = torch.tensor([reward], device=self.storage_device)
-        done = torch.tensor([done], device=self.storage_device)
+        action = torch.tensor([action], device=self.storage_device, dtype=torch.int32)
+        reward = torch.tensor([reward], device=self.storage_device, dtype=torch.float32)
+        done = torch.tensor([done], device=self.storage_device, dtype=torch.bool)
         #self.temp.add(TensorDict({"state": state, "next_state": next_state, "action": action, "reward": reward, "done": done}, batch_size=[], device=self.storage_device))
         self.episode_states.append(state)
         self.episode_next_states.append(next_state)

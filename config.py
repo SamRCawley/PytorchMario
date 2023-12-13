@@ -4,11 +4,11 @@ class Agent:
     exploration_rate_decay_episodes = 50000 # Percent to reduce exploration by each step (decimal)
     exploration_rate_min = 0.1 # Minimum for exploration rate (decimal). Note: Zero can result in stuck agent
     gamma = 0.9 # Gamma value for Q Learning (weight of future reward)
-    burnin = 1e4 # min. experiences before training
+    burnin = 5e3 # min. experiences before training
     learn_every = 10   # no. of experiences between updates to Q_online
     sync_every = 1e4   # no. of experiences between Q_target & Q_online sync
     save_every = 2e4   # no. of experiences between saving Mario Net
-    temp_dir = 'C:/AI_tmp' # location for temp files for replay buffer
+    temp_dir = 'E:/AI_tmp' # location for temp files for replay buffer
     # Probability distibution to use for random action
     # Must match actions in environment
     action_probability = [0.15, 0.15, 0.1, 0.05, 0.05, 0.2, 0.2, 0.05, 0.05]
@@ -26,7 +26,7 @@ class environment:
     # Valid button press combinations - list with each element being a list of buttons to press simultaneously as an action
     # e.g. [["right"], ["right", "A"], ["A"], ["left"], ["left", "A"], ["B", "right"], ["B", "right", "A"]]
     actions = [["right"], ["right", "A"], ["A"], ["left"], ["left", "A"], ["B", "right"], ["B", "right", "A"], ["down"], ["up"]]
-    num_episodes = 500 # Number of episodes to train this run (total training = prior training + num_episodes)
+    num_episodes = 50000 # Number of episodes to train this run (total training = prior training + num_episodes)
 
 class network:
     layer_size = 50 # Number of cells in each hidden layer

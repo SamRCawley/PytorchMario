@@ -103,7 +103,7 @@ for e in range(NUM_EPISODES):
         if done or info['flag_get']:
             break
     if e % 10 == 0:
-        print(f'Episode {mario.episode_num}: Current exploration rate {mario.exploration_rate}')
+        print(f'Episode {mario.episode_num}, Step {mario.curr_step}: Current exploration rate {mario.exploration_rate}')
 
     if LOGGING:
         logger.log_episode()
