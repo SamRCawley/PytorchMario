@@ -52,6 +52,7 @@ class Mario:
         self.episode_rewards = np.array(self.episode_rewards)
         length_of_level = current_index - self.level_start_index + 1
         self.episode_rewards[self.level_start_index:] += 500 / length_of_level
+        self.episode_rewards = self.episode_rewards.tolist()
         self.level_start_index = current_index
 
     def reset(self):
