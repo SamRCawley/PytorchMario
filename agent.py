@@ -5,8 +5,6 @@ from neuralnet import MarioNet
 from tensordict import TensorDict
 from pathlib import Path
 from config import Agent as config
-from config import network as net_config
-from config import environment as env_config
 #torch.autograd.set_detect_anomaly(True)
 
 class Mario:
@@ -44,14 +42,17 @@ class Mario:
     def decrease_recent_rewards(self):
         self.level_start_index = len(self.episode_rewards) - 1
         self.episode_rewards = np.array(self.episode_rewards)
-        self.episode_rewards[-5:-1] -= 15
+        if len(episode_rewards) >= 10:
+            self.episode_rewards[-10:-1] -= 15
+        else
+            self.episode_rewards[-len(episode_rewards):-1] -= 15
         self.episode_rewards = self.episode_rewards.tolist()
 
     def increase_level_rewards(self):
         current_index = len(self.episode_rewards) - 1
         self.episode_rewards = np.array(self.episode_rewards)
         length_of_level = current_index - self.level_start_index + 1
-        self.episode_rewards[self.level_start_index:] += 500 / length_of_level
+        self.episode_rewards[self.level_start_index:] += 1000 / length_of_level
         self.episode_rewards = self.episode_rewards.tolist()
         self.level_start_index = current_index
 

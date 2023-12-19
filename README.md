@@ -12,6 +12,8 @@ This is an update of the pytorch tutorial to create a RL model for Super Mario B
 * Uses a probability distribution when determining random movement (e.g. forward movements set to be more likely than backward)
 * Updates the cache in batch every episode to prevent large slowdown from frequency of HDD writes
 * Significant code cleanup and updates to be more consistent with current Pytorch standards
+* Updated cache and rewards to better account for lost lives (Mario is mostly deterministic, if one life failed to complete the stage with the model the next will as well)
+* Increased rewards on level completion based on total actions to complete level and allows progression to next stage.
 
 
 ## Installation:
@@ -38,3 +40,12 @@ Note: you need to train the agent first
   --no_log #Disables logging
   --num_episodes #Shortcut to override config number of episodes
 ```
+
+## Performance
+With 50k episodes trained with mario starting on 1-1 and being able to continue to the next stage the average reward approaches 6k.  This is equivelent to mario often progressing to stage 1-3.
+
+![moving average of rewards over 50k episodes](reward_plot.jpg)
+
+Training time for 50k episodes was nearly a week with a GeForce 2080 Super.  GPU memory usage when training is nearly 20GB including shared.
+
+![resource utilization from task manager] (resource_util.jpg)

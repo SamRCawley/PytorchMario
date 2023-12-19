@@ -12,7 +12,6 @@ import gym_super_mario_bros
 from agent import Mario
 from config import environment as config
 from torch.profiler import profile, record_function, ProfilerActivity
-
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 torch.backends.cudnn.benchmark = True
@@ -35,7 +34,6 @@ render_mode = 'human' if VISUALIZE else None
 
 env = gym_super_mario_bros.make(config.mario_version, render_mode=render_mode, apply_api_compatibility=True)
 
-
 """#Debug for edge detection filter
 def cannyfilter (x):
     edges = cv2.Canny(x, 30, 180)
@@ -45,7 +43,6 @@ def cannyfilter (x):
 
 env = JoypadSpace(env, config.actions)
 env = SkipFrame(env, skip=config.skip_frame_num)
-
 # Apply Wrappers to environment
 #env = GrayScaleObservation(env, keep_dim=False)
 #env = TransformObservation(env, f=lambda x: cv2.Canny(x, config.canny_low, config.canny_high))
@@ -75,7 +72,6 @@ if args.play:
 #with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA], with_stack=True, experimental_config=torch._C._profiler._ExperimentalConfig(verbose=True)) as prof:
     ### for Loop that train the model num_episodes times by playing the game
 for e in range(NUM_EPISODES):
-
     state = env.reset()
     mario.reset()
     # Play the game!
@@ -89,9 +85,10 @@ for e in range(NUM_EPISODES):
         next_state, reward, done, truncated, info = env.step(action)
         prev_lives = lives
         lives = info['life']
+        lost_life = lives < prev_lives
         if not args.play:
             # 6. Remember
-            mario.cache(state, next_state, action, reward, done)
+            mario.cache(state, next_state, action, reward, lost_life)
 
             # 7. Learn
             q, loss = mario.learn()
@@ -104,7 +101,7 @@ for e in range(NUM_EPISODES):
         state = next_state
 
         # 10. Check if end of game, level, or life lost
-        if lives < prev_lives:
+        if lost_life:
             mario.decrease_recent_rewards()
         if info['flag_get']:
             mario.increase_level_rewards()
@@ -124,7 +121,6 @@ for e in range(NUM_EPISODES):
                 epsilon=mario.exploration_rate,
                 step=mario.curr_step
             )
-
 #print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=10))
 #print(prof.key_averages(group_by_stack_n=10).table(sort_by="cpu_time_total", row_limit=5))
 #print(prof.key_averages().table(sort_by="cpu_memory_usage", row_limit=10))

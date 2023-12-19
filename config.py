@@ -27,7 +27,3 @@ class environment:
     # e.g. [["right"], ["right", "A"], ["A"], ["left"], ["left", "A"], ["B", "right"], ["B", "right", "A"]]
     actions = [["right"], ["right", "A"], ["A"], ["left"], ["left", "A"], ["B", "right"], ["B", "right", "A"], ["down"], ["up"]]
     num_episodes = 50000 # Number of episodes to train this run (total training = prior training + num_episodes)
-
-class network:
-    layer_size = 50 # Number of cells in each hidden layer
-    n_layers = 4 # Number of hidden layers
