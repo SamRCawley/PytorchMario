@@ -42,10 +42,10 @@ class Mario:
     def decrease_recent_rewards(self):
         self.level_start_index = len(self.episode_rewards) - 1
         self.episode_rewards = np.array(self.episode_rewards)
-        if len(episode_rewards) >= 10:
+        if len(self.episode_rewards) >= 10:
             self.episode_rewards[-10:-1] -= 15
-        else
-            self.episode_rewards[-len(episode_rewards):-1] -= 15
+        else:
+            self.episode_rewards[-len(self.episode_rewards):-1] -= 15
         self.episode_rewards = self.episode_rewards.tolist()
 
     def increase_level_rewards(self):
