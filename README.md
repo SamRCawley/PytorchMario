@@ -48,4 +48,4 @@ With 50k episodes trained with mario starting on 1-1 and being able to continue 
 
 Training time for 50k episodes was nearly a week with a GeForce 2080 Super.  GPU memory usage when training is nearly 20GB including shared.
 
-![resource utilization from task manager](resource_util.jpg)
+![resource utilization from task manager](resource_util.png)
